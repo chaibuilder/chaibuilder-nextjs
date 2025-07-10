@@ -1,28 +1,16 @@
-export const LeftFrame = ({
-  loading,
-  version,
-  getVersionUrl,
-  getVersionLabel,
-}: any) => {
+export const LeftFrame = ({ url }: { url: string }) => {
   return (
-    <div className="w-1/2 h-full flex flex-col">
-      {/* Frame content */}
+    <div className="w-full h-full flex flex-col">
       <div className="flex-grow">
-        {loading ? (
-          <div className="h-full flex items-center justify-center">
-            <p className="text-gray-500">Loading...</p>
-          </div>
-        ) : version ? (
+        {url ? (
           <iframe
-            src={getVersionUrl(version)}
+            src={url}
             className="w-full h-full"
-            title={`Version ${getVersionLabel(version)}`}
-            // @ts-ignore - crossOrigin is valid but TypeScript doesn't recognize it
-            crossOrigin="anonymous"
+            title="Left frame content"
           />
         ) : (
           <div className="h-full flex items-center justify-center">
-            <p className="text-gray-500">No version selected</p>
+            <p className="text-gray-500">No URL provided</p>
           </div>
         )}
       </div>

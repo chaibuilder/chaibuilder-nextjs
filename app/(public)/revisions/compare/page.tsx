@@ -1,7 +1,8 @@
-import { getChaiSiteSettings } from "@/chai";
+import { getChaiBuilderRevisionPage, getChaiSiteSettings } from "@/chai";
 import { notFound } from "next/navigation";
 import { LeftFrame } from "./components/left-ifram";
 import { RightFrame } from "./components/right-iframe";
+import { LanguageSelector } from "./components/LanguageSelector";
 
 interface VersionInfo {
   type: "draft" | "live" | "revision";
@@ -18,60 +19,66 @@ interface ComparePageProps {
   };
 }
 
-const getVersionInfo = (versionString: string): VersionInfo => {
-  // TODO: Replace with actual data fetching logic
-  const [type] = versionString.split(":");
+const getVersionInfo = async (versionString: string, fallbackLang: string = "en"): Promise<VersionInfo> => {
+  let type: "draft" | "live" | "revision" = "revision";
+  let id = "";
+  let lang = fallbackLang;
+  let label = "";
+  
+  const typeMatch = versionString.match(/^(revision|draft|live):([^:]+)(?::([^:]+))?/);
+  
+  if (typeMatch) {
+    type = typeMatch[1] as "draft" | "live" | "revision";
+    id = typeMatch[2];
+    if (type === "revision") {
+      label = typeMatch[3]?.split("&")[0] || " ";
+    }
+  } else {
+    id = versionString;
+  }
+  // console.log ("###",type,id,lang,label)
+  
+  const pageData = await getChaiBuilderRevisionPage({
+    id : id,
+    type : type,
+    lang : lang,
+  });
+  console.log("##",pageData)
+  
   return {
-    type: type as "draft" | "live" | "revision",
-    author: "Author Name",
-    publishedAt: new Date().toISOString(),
-    lastSaved: new Date().toISOString(),
+    type ,
+    author: pageData?.author || undefined,
+    publishedAt: pageData.publishedAt || undefined,
+    lastSaved: pageData.lastSaved || undefined,
   };
 };
 
 export default async function ComparePage({ searchParams }: ComparePageProps) {
-  const { version1, version2, lang = "en" } = searchParams;
+  const { version1, version2, lang = "en" } = await searchParams;
   const siteSettings = await getChaiSiteSettings();
-  console.log("###", siteSettings);
-  console.log(version1);
-  console.log(version2);
-  console.log(lang);
+  const fallbackLang = siteSettings?.fallbackLang || "en";
+  const availableLanguages = siteSettings?.languages?.length
+    ? [...new Set([fallbackLang, ...siteSettings.languages])]
+    : [fallbackLang];
 
   if (!version1 || !version2) {
     return notFound();
   }
 
-  const baseVersion = getVersionInfo(version1);
-  const compareVersion = getVersionInfo(version2);
-
-  const baseVersionUrl = `/api/preview?type=${baseVersion.type}&id=${version1.split(":")[1]}&lang=${lang}`;
-  const compareVersionUrl = `/api/preview?type=${compareVersion.type}&id=${version2.split(":")[1]}&lang=${lang}`;
-
-  const getVersionLabel = (versionString: string): string => {
-    if (!versionString) return "Select version";
-    if (versionString.includes("live:")) return "Live";
-    if (versionString.includes("draft:")) return "Draft";
-
-    const revisionMatch = versionString.match(/revision:[^:]+:(\d+)/);
-    if (revisionMatch) {
-      return `Revision ${revisionMatch[1]}`;
-    }
-    return versionString;
-  };
+  
+  const baseVersionUrl = `/revision/${version1}&lang=${lang}`;
+  const compareVersionUrl = `/revision/${version2}&lang=${lang}`;
+  const baseVersion = await getVersionInfo(version1);
+  const compareVersion = await getVersionInfo(version2);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      {/* Header */}
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Compare Revisions</h1>
-      </header>
-
+    <div className="min-h-screen bg-gray-50 ">
       {/* Version Selector */}
-      <div className="mb-6 bg-white rounded-lg shadow p-4">
+      <div className=" bg-white p-4  ">
         <div className="flex items-center justify-between gap-4">
-          {/* Base Version */}
           <div className="flex-1">
             <div className="flex items-center gap-2">
+              <h2 className="text-lg font-medium text-gray-900">Version 1</h2>
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                 {baseVersion.type}
               </span>
@@ -82,31 +89,14 @@ export default async function ComparePage({ searchParams }: ComparePageProps) {
             </p>
           </div>
 
-          {/* Center Language Selector */}
-          <div className="flex-shrink-0">
-            <div className="relative">
-              <select
-                className="block w-full py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-[10px]"
-                defaultValue={lang}
-                onChange={(e) => {
-                  const newParams = new URLSearchParams(window.location.search);
-                  newParams.set("lang", e.target.value);
-                  window.location.search = newParams.toString();
-                }}
-              >
-                <option value="en">English</option>
-                <option value="es">Spanish</option>
-                <option value="fr">French</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Compare Version */}
+          {/* Language Selector */}
+          <LanguageSelector
+            defaultValue={lang}
+            languages={availableLanguages}
+          />
           <div className="flex-1 text-right">
             <div className="flex items-center justify-end gap-2">
-              <h2 className="text-lg font-medium text-gray-900">
-                Compare Version
-              </h2>
+              <h2 className="text-lg font-medium text-gray-900">Version 2</h2>
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                 {compareVersion.type}
               </span>
@@ -120,23 +110,15 @@ export default async function ComparePage({ searchParams }: ComparePageProps) {
       </div>
 
       {/* Comparison View */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="p-4 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900">Base Version</h3>
-          </div>
-          <div className="h-[calc(100vh-250px)]">
+      <div className="grid grid-cols-1 md:grid-cols-2 ">
+        <div className="bg-white  shadow overflow-hidden">
+          <div className="h-screen">
             <LeftFrame url={baseVersionUrl} />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="p-4 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900">
-              Compare Version
-            </h3>
-          </div>
-          <div className="h-[calc(100vh-250px)]">
+        <div className="bg-white  shadow overflow-hidden">
+          <div className="h-screen">
             <RightFrame url={compareVersionUrl} />
           </div>
         </div>
