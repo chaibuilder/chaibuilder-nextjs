@@ -4,10 +4,9 @@ import {
   getChaiSiteSettings,
 } from "@/chai";
 import { notFound } from "next/navigation";
-import { LeftFrame } from "./components/left-ifram";
-import { RightFrame } from "./components/right-iframe";
-import { LanguageSelector } from "./components/LanguageSelector";
+import { LanguageSelector } from "./components/language-selector";
 import { get } from "lodash";
+import { IframeRevision } from "./components/iframe-revision";
 
 interface VersionInfo {
   type: "draft" | "live" | "revision";
@@ -72,11 +71,11 @@ export default async function ComparePage({ searchParams }: ComparePageProps) {
   if (!version1 || !version2) {
     return notFound();
   }
-
-  const baseVersionUrl = `/revision/${version1}?lang=${lang}`;
-  const compareVersionUrl = `/revision/${version2}?lang=${lang}`;
-  const baseVersion = await getVersionInfo(version1, lang as string);
-  const compareVersion = await getVersionInfo(version2, lang as string);
+  const currentLang = lang || fallbackLang;
+  const baseVersionUrl = `/revision/${version1}?lang=${currentLang}&banner=false`;
+  const compareVersionUrl = `/revision/${version2}?lang=${currentLang}&banner=false`;
+  const baseVersion = await getVersionInfo(version1, currentLang);
+  const compareVersion = await getVersionInfo(version2, currentLang);
 
   return (
     <div className="min-h-screen bg-gray-50 ">
@@ -127,14 +126,14 @@ export default async function ComparePage({ searchParams }: ComparePageProps) {
       {/* Comparison View */}
       <div className="grid grid-cols-1 md:grid-cols-2 ">
         <div className="bg-white  shadow overflow-hidden">
-          <div className="h-screen">
-            <LeftFrame url={baseVersionUrl} />
+          <div title="Version 1" className="h-screen">
+            <IframeRevision url={baseVersionUrl} />
           </div>
         </div>
 
         <div className="bg-white  shadow overflow-hidden">
-          <div className="h-screen">
-            <RightFrame url={compareVersionUrl} />
+          <div title="Version 2" className="h-screen">
+            <IframeRevision url={compareVersionUrl} />
           </div>
         </div>
       </div>

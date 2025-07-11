@@ -8,12 +8,14 @@ interface LanguageSelectorProps {
 }
 
 export const LanguageSelector = ({
-  defaultValue = "en",
-  className = "",
-  languages = ["en"],
+  defaultValue,
+  className,
+  languages,
 }: LanguageSelectorProps) => {
   const searchParams = useSearchParams();
   const router = useRouter();
+  
+  const currentLang = searchParams.get("lang") || defaultValue;
 
   const handleLanguageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newLang = e.target.value;
@@ -27,10 +29,10 @@ export const LanguageSelector = ({
       <div className="relative">
         <select
           className="block w-full py-2 text-base border border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-          defaultValue={defaultValue}
+          value={currentLang}
           onChange={handleLanguageChange}
         >
-          {languages.map((lang) => (
+          {languages && languages.map((lang) => (
             <option key={lang} value={lang}>
               {lang.toUpperCase()}
             </option>

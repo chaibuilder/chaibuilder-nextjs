@@ -53,6 +53,7 @@ export default async function Page({
   searchParams: Promise<{
     label?: string;
     lang?: string;
+    banner?: string;
   }>;
 }) {
   let type: "draft" | "live" | "revision" = "revision";
@@ -62,6 +63,7 @@ export default async function Page({
   const { isEnabled } = await draftMode();
   const nextParams = await params;
   const search = await searchParams;
+  const banner = search.banner === "false" ? false : true;
   const siteSettings: { fallbackLang: string; error?: string } =
     await getChaiSiteSettings();
   const fallbackLang = get(siteSettings, "fallbackLang", "en");
@@ -111,7 +113,7 @@ export default async function Page({
         id="chaibuilder-styles"
         dangerouslySetInnerHTML={{ __html: pageStyles }}
       />
-      <RevisionBanner type={type} label={label} time={chaiPage.lastSaved} />
+      {banner && <RevisionBanner type={type} label={label} time={chaiPage.lastSaved} />}
       <RenderChaiBlocks
         externalData={chaiPage}
         blocks={chaiPage.blocks as unknown as ChaiBlock[]}
