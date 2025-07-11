@@ -55,21 +55,23 @@ export default async function Page({
     lang?: string;
   }>;
 }) {
+  let type: "draft" | "live" | "revision" = "revision";
+  let id = "";
+  let lang = "";
+  let label = "";
   const { isEnabled } = await draftMode();
   const nextParams = await params;
   const search = await searchParams;
-
   const siteSettings: { fallbackLang: string; error?: string } =
     await getChaiSiteSettings();
   const fallbackLang = get(siteSettings, "fallbackLang", "en");
-  chaiBuilderPages.setFallbackLang(fallbackLang);
-
+  if (search.lang) {
+    lang = search.lang;
+  } else {
+    lang = fallbackLang;
+  }
+  chaiBuilderPages.setFallbackLang(lang);
   const pathSegment = decodeURIComponent(nextParams.revisions[0]);
-
-  let type: "draft" | "live" | "revision" = "revision";
-  let id = "";
-  let lang = fallbackLang;
-  let label = "";
   const typeMatch = pathSegment.match(
     /^(revision|draft|live):([^:]+)(?::([^:]+))?/
   );
@@ -78,13 +80,10 @@ export default async function Page({
     type = typeMatch[1] as "draft" | "live" | "revision";
     id = typeMatch[2];
     if (type == "revision") {
-      label = typeMatch[3].split("&")[0] || " ";
+      label = typeMatch[3]?.split("&")[0] || " ";
     }
   } else {
     id = pathSegment;
-  }
-  if (search.lang) {
-    lang = search.lang;
   }
   const chaiPage = await getChaiBuilderRevisionPage({
     id,

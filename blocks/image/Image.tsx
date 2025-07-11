@@ -30,6 +30,7 @@ export const ImageBlock = (
     height: shouldUseFill ? undefined : parseInt(height),
     width: shouldUseFill ? undefined : parseInt(width),
     style: shouldUseFill ? { objectFit: "cover" } : undefined,
+    unoptimized: true,
   });
 
   if (shouldUseFill) {

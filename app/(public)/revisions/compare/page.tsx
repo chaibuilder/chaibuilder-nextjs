@@ -1,8 +1,13 @@
-import { getChaiBuilderRevisionPage, getChaiSiteSettings } from "@/chai";
+import {
+  chaiBuilderPages,
+  getChaiBuilderRevisionPage,
+  getChaiSiteSettings,
+} from "@/chai";
 import { notFound } from "next/navigation";
 import { LeftFrame } from "./components/left-ifram";
 import { RightFrame } from "./components/right-iframe";
 import { LanguageSelector } from "./components/LanguageSelector";
+import { get } from "lodash";
 
 interface VersionInfo {
   type: "draft" | "live" | "revision";
@@ -19,14 +24,16 @@ interface ComparePageProps {
   };
 }
 
-const getVersionInfo = async (versionString: string, fallbackLang: string = "en"): Promise<VersionInfo> => {
+const getVersionInfo = async (
+  versionString: string,
+  lang: string
+): Promise<VersionInfo> => {
   let type: "draft" | "live" | "revision" = "revision";
   let id = "";
-  let lang = fallbackLang;
   let label = "";
-  
-  const typeMatch = versionString.match(/^(revision|draft|live):([^:]+)(?::([^:]+))?/);
-  
+  const typeMatch = versionString.match(
+    /^(revision|draft|live):([^:]+)(?::([^:]+))?/
+  );
   if (typeMatch) {
     type = typeMatch[1] as "draft" | "live" | "revision";
     id = typeMatch[2];
@@ -36,17 +43,13 @@ const getVersionInfo = async (versionString: string, fallbackLang: string = "en"
   } else {
     id = versionString;
   }
-  // console.log ("###",type,id,lang,label)
-  
   const pageData = await getChaiBuilderRevisionPage({
-    id : id,
-    type : type,
-    lang : lang,
+    id,
+    type,
+    lang,
   });
-  console.log("##",pageData)
-  
   return {
-    type ,
+    type,
     author: pageData?.author || undefined,
     publishedAt: pageData.publishedAt || undefined,
     lastSaved: pageData.lastSaved || undefined,
@@ -54,22 +57,26 @@ const getVersionInfo = async (versionString: string, fallbackLang: string = "en"
 };
 
 export default async function ComparePage({ searchParams }: ComparePageProps) {
-  const { version1, version2, lang = "en" } = await searchParams;
+  const { version1, version2, lang } = await searchParams;
   const siteSettings = await getChaiSiteSettings();
-  const fallbackLang = siteSettings?.fallbackLang || "en";
-  const availableLanguages = siteSettings?.languages?.length
-    ? [...new Set([fallbackLang, ...siteSettings.languages])]
-    : [fallbackLang];
+  const fallbackLang = get(siteSettings, "fallbackLang");
+  if (lang) {
+    chaiBuilderPages.setFallbackLang(lang);
+  } else {
+    chaiBuilderPages.setFallbackLang(fallbackLang);
+  }
+  const availableLanguages = [
+    ...new Set([fallbackLang, ...siteSettings.languages]),
+  ];
 
   if (!version1 || !version2) {
     return notFound();
   }
 
-  
-  const baseVersionUrl = `/revision/${version1}&lang=${lang}`;
-  const compareVersionUrl = `/revision/${version2}&lang=${lang}`;
-  const baseVersion = await getVersionInfo(version1);
-  const compareVersion = await getVersionInfo(version2);
+  const baseVersionUrl = `/revision/${version1}?lang=${lang}`;
+  const compareVersionUrl = `/revision/${version2}?lang=${lang}`;
+  const baseVersion = await getVersionInfo(version1, lang as string);
+  const compareVersion = await getVersionInfo(version2, lang as string);
 
   return (
     <div className="min-h-screen bg-gray-50 ">
@@ -84,8 +91,12 @@ export default async function ComparePage({ searchParams }: ComparePageProps) {
               </span>
             </div>
             <p className="mt-1 text-sm text-gray-500">
-              {baseVersion.publishedAt &&
-                `Published on ${new Date(baseVersion.publishedAt).toLocaleDateString()}`}
+              {baseVersion.author && `By ${baseVersion.author} `}
+              {baseVersion.publishedAt
+                ? `Published on ${new Date(baseVersion.publishedAt).toLocaleDateString()}`
+                : baseVersion.lastSaved
+                  ? `Last saved on ${new Date(baseVersion.lastSaved).toLocaleDateString()}`
+                  : ""}
             </p>
           </div>
 
@@ -102,8 +113,12 @@ export default async function ComparePage({ searchParams }: ComparePageProps) {
               </span>
             </div>
             <p className="mt-1 text-sm text-gray-500">
-              {compareVersion.lastSaved &&
-                `Last saved on ${new Date(compareVersion.lastSaved).toLocaleDateString()}`}
+              {compareVersion.author && `By ${compareVersion.author} `}
+              {compareVersion.publishedAt
+                ? `Published on ${new Date(compareVersion.publishedAt).toLocaleDateString()}`
+                : compareVersion.lastSaved
+                  ? `Last saved on ${new Date(compareVersion.lastSaved).toLocaleDateString()}`
+                  : ""}
             </p>
           </div>
         </div>
