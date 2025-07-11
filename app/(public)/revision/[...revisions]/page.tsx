@@ -63,7 +63,7 @@ export default async function Page({
   const { isEnabled } = await draftMode();
   const nextParams = await params;
   const search = await searchParams;
-  const banner = search.banner === "false" ? false : true;
+  const banner = search.banner !== "false";
   const siteSettings: { fallbackLang: string; error?: string } =
     await getChaiSiteSettings();
   const fallbackLang = get(siteSettings, "fallbackLang", "en");

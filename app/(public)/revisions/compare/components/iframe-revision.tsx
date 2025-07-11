@@ -6,9 +6,10 @@ export const IframeRevision = ({ url }: { url: string }) => {
             <iframe
               src={url}
               className="w-full h-full"
-              title="iframe content"
+              title="Revision content"
               sandbox="allow-same-origin allow-scripts allow-forms"
               loading="lazy"
+              onError={() => console.error('Failed to load iframe:', url)}
             />
           ) : (
             <div className="h-full flex items-center justify-center">
